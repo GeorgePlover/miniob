@@ -520,7 +520,24 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
 RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
 {
   // your code here
-  exit(-1);
+  // exit(-1);
+  int column_num=chunk.column_num();
+  for (int i=0;i<column_num;i++){
+    int column_id=chunk.column_ids(i);
+    if (column_id>=page_header_->column_num) return RC::RECORD_INVALID_RID;// !!!column id invalid
+    Column& column=chunk.column(i);
+    int *column_index = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
+    int pre=0;
+    if (column_id) pre=column_index[column_id-1];
+    int column_len=(column_index[column_id]-pre)/page_header_->record_num;
+    Bitmap bitmap(bitmap_, page_header_->record_capacity);
+    for (int slot_num=0;slot_num<page_header_->record_num;i++){
+      if (!bitmap.get_bit(slot_num)) continue;
+      char *src=frame_->data()+pre+slot_num*column_len;
+      column.append_one(src);
+    }
+  }
+  return RC::SUCCESS;
 }
 
 char *PaxRecordPageHandler::get_field_data(SlotNum slot_num, int col_id)
