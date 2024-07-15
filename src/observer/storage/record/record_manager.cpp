@@ -491,7 +491,6 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
 {
   // your code here
   // exit(-1);
-  
   if (rid.slot_num >= page_header_->record_capacity) {
     LOG_ERROR("Invalid slot_num %d, exceed page's record capacity, frame=%s, page_header=%s",
               rid.slot_num, frame_->to_string().c_str(), page_header_->to_string().c_str());
@@ -503,41 +502,38 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
     LOG_ERROR("Invalid slot_num:%d, slot is empty, page_num %d.", rid.slot_num, frame_->page_num());
     return RC::RECORD_NOT_EXIST;
   }
-  
-  record.set_rid(rid);
-  int data_len = 0;
-  for (int i = 0; i < page_header_->column_num; ++i) {
-    data_len += get_field_len(i);
-  }
-  record.new_record(data_len);
-  data_len = 0;
-  for (int i = 0; i < page_header_->column_num; ++i) {
-    record.set_field(data_len, get_field_len(i), get_field_data(rid.slot_num, i));
-    data_len += get_field_len(i);
-  }
 
-  // record.set_data(get_record_data(rid.slot_num), page_header_->record_real_size);
+  record.set_rid(rid);
+  record.new_record(page_header_->record_real_size);
+  int *column_index = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
+  int dataidx=0;
+  for (int i=0;i<page_header_->column_num;i++){
+    int pre=0;
+    if (i) pre=column_index[i-1];
+    int column_len=(column_index[i]-pre)/page_header_->record_capacity;
+    char *src=frame_->data()+page_header_->data_offset+pre+rid.slot_num*column_len;
+    record.set_field(dataidx,column_len,src);
+    dataidx+=column_len;
+  }
   return RC::SUCCESS;
 }
 
-// TODO: specify the column_ids that chunk needed. currenly we get all columns
 RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
 {
   // your code here
   // exit(-1);
-  int column_num=chunk.column_num();
-  for (int i=0;i<column_num;i++){
-    int column_id=chunk.column_ids(i);
-    Column& column=chunk.column(i);
-    int *column_index = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
-    int pre=0;
-    if (column_id) pre=column_index[column_id-1];
-    int column_len=(column_index[column_id]-pre)/page_header_->record_capacity;
-    Bitmap bitmap(bitmap_, page_header_->record_capacity);
-    for (int slot_num=0;slot_num<page_header_->record_capacity;slot_num++){
-      if (!bitmap.get_bit(slot_num)) continue;
-      char *src=frame_->data()+page_header_->data_offset+pre+slot_num*column_len;
-      column.append_one(src);
+
+  Bitmap bitmap(bitmap_, page_header_->record_capacity);
+  int start = 0;
+  while (true) {
+    int index = bitmap.next_setted_bit(start);
+    if (index == -1) {
+      break;
+    }
+    start = index + 1;
+    for (int i = 0; i < chunk.column_num(); ++i) {
+      int column_id = chunk.column_ids(i);
+      chunk.column(i).append_one(get_field_data(index, column_id));
     }
   }
   return RC::SUCCESS;
