@@ -446,8 +446,8 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
   for (int i=0;i<page_header_->column_num;i++){
     int pre=0;
     if (i) pre=column_index[i-1];
-    int column_len=(column_index[i]-pre)/page_header_->record_num;
-    char *src=frame_->data()+pre+index*column_len;
+    int column_len=(column_index[i]-pre)/page_header_->record_capacity;
+    char *src=frame_->data()+page_header_->data_offset+pre+index*column_len;
     memcpy(src,data+dataidx,column_len);
     dataidx+=column_len;
   }
@@ -489,6 +489,8 @@ RC PaxRecordPageHandler::delete_record(const RID *rid)
 
 RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
 {
+  // your code here
+  // exit(-1);
   if (rid.slot_num >= page_header_->record_capacity) {
     LOG_ERROR("Invalid slot_num %d, exceed page's record capacity, frame=%s, page_header=%s",
               rid.slot_num, frame_->to_string().c_str(), page_header_->to_string().c_str());
@@ -508,8 +510,8 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
   for (int i=0;i<page_header_->column_num;i++){
     int pre=0;
     if (i) pre=column_index[i-1];
-    int column_len=(column_index[i]-pre)/page_header_->record_num;
-    char *src=frame_->data()+pre+rid.slot_num*column_len;
+    int column_len=(column_index[i]-pre)/page_header_->record_capacity;
+    char *src=frame_->data()+page_header_->data_offset+pre+rid.slot_num*column_len;
     record.set_field(dataidx,column_len,src);
     dataidx+=column_len;
   }
@@ -524,16 +526,15 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
   int column_num=chunk.column_num();
   for (int i=0;i<column_num;i++){
     int column_id=chunk.column_ids(i);
-    if (column_id>=page_header_->column_num) return RC::RECORD_INVALID_RID;// !!!column id invalid
     Column& column=chunk.column(i);
     int *column_index = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
     int pre=0;
     if (column_id) pre=column_index[column_id-1];
-    int column_len=(column_index[column_id]-pre)/page_header_->record_num;
+    int column_len=(column_index[column_id]-pre)/page_header_->record_capacity;
     Bitmap bitmap(bitmap_, page_header_->record_capacity);
-    for (int slot_num=0;slot_num<page_header_->record_num;i++){
+    for (int slot_num=0;slot_num<page_header_->record_capacity;slot_num++){
       if (!bitmap.get_bit(slot_num)) continue;
-      char *src=frame_->data()+pre+slot_num*column_len;
+      char *src=frame_->data()+page_header_->data_offset+pre+slot_num*column_len;
       column.append_one(src);
     }
   }
