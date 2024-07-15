@@ -441,10 +441,15 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
   // assert index < page_header_->record_capacity
   // char *record_data = get_record_data(index);
   // memcpy(record_data, data, page_header_->record_real_size);
-  int data_len = 0;
-  for (int i = 0; i < page_header_->column_num; ++i) {
-    memcpy(get_field_data(index, i), data + data_len, get_field_len(i));
-    data_len += get_field_len(i);
+  int *column_index = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
+  int dataidx=0;
+  for (int i=0;i<page_header_->column_num;i++){
+    int pre=0;
+    if (i) pre=column_index[i-1];
+    int column_len=(column_index[i]-pre)/page_header_->record_capacity;
+    char *src=frame_->data()+page_header_->data_offset+pre+index*column_len;
+    memcpy(src,data+dataidx,column_len);
+    dataidx+=column_len;
   }
 
   frame_->mark_dirty();
@@ -486,6 +491,7 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
 {
   // your code here
   // exit(-1);
+  
   if (rid.slot_num >= page_header_->record_capacity) {
     LOG_ERROR("Invalid slot_num %d, exceed page's record capacity, frame=%s, page_header=%s",
               rid.slot_num, frame_->to_string().c_str(), page_header_->to_string().c_str());
@@ -497,19 +503,20 @@ RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
     LOG_ERROR("Invalid slot_num:%d, slot is empty, page_num %d.", rid.slot_num, frame_->page_num());
     return RC::RECORD_NOT_EXIST;
   }
-
+  
   record.set_rid(rid);
-  record.new_record(page_header_->record_real_size);
-  int *column_index = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
-  int dataidx=0;
-  for (int i=0;i<page_header_->column_num;i++){
-    int pre=0;
-    if (i) pre=column_index[i-1];
-    int column_len=(column_index[i]-pre)/page_header_->record_capacity;
-    char *src=frame_->data()+page_header_->data_offset+pre+rid.slot_num*column_len;
-    record.set_field(dataidx,column_len,src);
-    dataidx+=column_len;
+  int data_len = 0;
+  for (int i = 0; i < page_header_->column_num; ++i) {
+    data_len += get_field_len(i);
   }
+  record.new_record(data_len);
+  data_len = 0;
+  for (int i = 0; i < page_header_->column_num; ++i) {
+    record.set_field(data_len, get_field_len(i), get_field_data(rid.slot_num, i));
+    data_len += get_field_len(i);
+  }
+
+  // record.set_data(get_record_data(rid.slot_num), page_header_->record_real_size);
   return RC::SUCCESS;
 }
 
