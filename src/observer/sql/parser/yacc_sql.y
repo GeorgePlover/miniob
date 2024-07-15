@@ -69,6 +69,7 @@ UnboundAggregateExpr *create_aggregate_expression(const char *aggregate_name,
         CREATE
         DROP
         GROUP
+        SUM
         TABLE
         TABLES
         INDEX
@@ -531,6 +532,11 @@ expression:
       $$ = new StarExpr();
     }
     // your code here
+    | SUM LBRACE expression RBRACE {
+      UnboundAggregateExpr *agg_expr = new UnboundAggregateExpr("SUM", $3);
+      agg_expr->set_name(token_name(sql_string, &@$));
+      $$ = agg_expr;
+    }
     ;
 
 rel_attr:

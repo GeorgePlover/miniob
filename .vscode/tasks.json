@@ -48,6 +48,10 @@
             "dependsOn": [
                 "cmake",
                 "make"
+            ],
+            "args": [
+                "-j",
+                "4",
             ]
         }
     ]
