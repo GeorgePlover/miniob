@@ -441,15 +441,10 @@ RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
   // assert index < page_header_->record_capacity
   // char *record_data = get_record_data(index);
   // memcpy(record_data, data, page_header_->record_real_size);
-  int *column_index = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
-  int dataidx=0;
-  for (int i=0;i<page_header_->column_num;i++){
-    int pre=0;
-    if (i) pre=column_index[i-1];
-    int column_len=(column_index[i]-pre)/page_header_->record_capacity;
-    char *src=frame_->data()+page_header_->data_offset+pre+index*column_len;
-    memcpy(src,data+dataidx,column_len);
-    dataidx+=column_len;
+  int data_len = 0;
+  for (int i = 0; i < page_header_->column_num; ++i) {
+    memcpy(get_field_data(index, i), data + data_len, get_field_len(i));
+    data_len += get_field_len(i);
   }
 
   frame_->mark_dirty();
