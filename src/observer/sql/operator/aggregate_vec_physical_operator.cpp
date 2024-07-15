@@ -101,7 +101,39 @@ void AggregateVecPhysicalOperator::update_aggregate_state(void *state, const Col
 RC AggregateVecPhysicalOperator::next(Chunk &chunk)
 {
   // your code here
-  exit(-1);
+  // exit(-1);
+
+  if (output_chunk_.column_num() == 0) {
+    return RC::RECORD_EOF;
+  }
+
+  chunk.reset();
+
+  for (size_t i = 0; i < aggregate_expressions_.size(); i++) {
+    ASSERT(aggregate_expressions_[i]->type() == ExprType::AGGREGATION, "expect aggregate expression");
+    auto *aggregate_expr = static_cast<AggregateExpr *>(aggregate_expressions_[i]);
+    if (aggregate_expr->aggregate_type() == AggregateExpr::Type::SUM) {
+      if (aggregate_expr->value_type() == AttrType::INTS) {
+        SumState<int> *state_ptr = reinterpret_cast<SumState<int> *>(aggr_values_.at(i));
+        auto column = make_unique<Column>(AttrType::INTS, sizeof(int));
+        column->append_one((char*)&state_ptr->value);
+        chunk.add_column(std::move(column), i);
+      } else if (aggregate_expr->value_type() == AttrType::FLOATS) {
+        SumState<float> *state_ptr = reinterpret_cast<SumState<float> *>(aggr_values_.at(i));
+        auto column = make_unique<Column>(AttrType::FLOATS, sizeof(float));
+        column->append_one((char*)&state_ptr->value);
+        chunk.add_column(std::move(column), i);
+      } else {
+        ASSERT(false, "not supported value type");
+      }
+    } else {
+      ASSERT(false, "not supported aggregation type");
+    }
+  }
+
+  output_chunk_.reset();
+  
+  return RC::SUCCESS;
 }
 
 RC AggregateVecPhysicalOperator::close()
