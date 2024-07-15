@@ -524,13 +524,13 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
   // your code here
   // exit(-1);
   int column_num=chunk.column_num();
+  Bitmap bitmap(bitmap_, page_header_->record_capacity);
   for (int i=0;i<column_num;i++){
     int column_id=chunk.column_ids(i);
     int *column_index = reinterpret_cast<int *>(frame_->data() + page_header_->col_idx_offset);
     int pre=0;
     if (column_id) pre=column_index[column_id-1];
-    int column_len=(column_index[column_id]-pre)/page_header_->record_capacity;
-    Bitmap bitmap(bitmap_, page_header_->record_capacity);
+    int column_len=get_field_len(column_id);
     for (int slot_num=bitmap.next_setted_bit(0);slot_num!=-1;slot_num=bitmap.next_setted_bit(slot_num+1)){
       char *src=frame_->data()+page_header_->data_offset+pre+slot_num*column_len;
       chunk.column(i).append_one(src);
