@@ -417,7 +417,47 @@ bool RecordPageHandler::is_full() const { return page_header_->record_num >= pag
 RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
 {
   // your code here
-  exit(-1);
+  // exit(-1);
+
+  ASSERT(rw_mode_ != ReadWriteMode::READ_ONLY, 
+         "cannot insert record into page while the page is readonly");
+
+  if (page_header_->record_num == page_header_->record_capacity) {
+    LOG_WARN("Page is full, page_num %d:%d.", disk_buffer_pool_->file_desc(), frame_->page_num());
+    return RC::RECORD_NOMEM;
+  }
+
+  // 找到空闲位置
+  Bitmap bitmap(bitmap_, page_header_->record_capacity);
+  int    index = bitmap.next_unsetted_bit(0);
+  bitmap.set_bit(index);
+  page_header_->record_num++;
+
+  RC rc = log_handler_.insert_record(frame_, RID(get_page_num(), index), data);
+  if (OB_FAIL(rc)) {
+    LOG_ERROR("Failed to insert record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
+    // return rc; // ignore errors
+  }
+
+  // assert index < page_header_->record_capacity
+  // char *record_data = get_record_data(index);
+  // memcpy(record_data, data, page_header_->record_real_size);
+
+  int data_len = 0;
+  for (int i = 0; i < page_header_->column_num; ++i) {
+    memcpy(get_field_data(index, i), data + data_len, get_field_len(i));
+    data_len += get_field_len(i);
+  }
+
+  frame_->mark_dirty();
+
+  if (rid) {
+    rid->page_num = get_page_num();
+    rid->slot_num = index;
+  }
+
+  // LOG_TRACE("Insert record. rid page_num=%d, slot num=%d", get_page_num(), index);
+  return RC::SUCCESS;
 }
 
 RC PaxRecordPageHandler::delete_record(const RID *rid)
@@ -447,14 +487,56 @@ RC PaxRecordPageHandler::delete_record(const RID *rid)
 RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
 {
   // your code here
-  exit(-1);
+  // exit(-1);
+  
+  if (rid.slot_num >= page_header_->record_capacity) {
+    LOG_ERROR("Invalid slot_num %d, exceed page's record capacity, frame=%s, page_header=%s",
+              rid.slot_num, frame_->to_string().c_str(), page_header_->to_string().c_str());
+    return RC::RECORD_INVALID_RID;
+  }
+
+  Bitmap bitmap(bitmap_, page_header_->record_capacity);
+  if (!bitmap.get_bit(rid.slot_num)) {
+    LOG_ERROR("Invalid slot_num:%d, slot is empty, page_num %d.", rid.slot_num, frame_->page_num());
+    return RC::RECORD_NOT_EXIST;
+  }
+  
+  record.set_rid(rid);
+  int data_len = 0;
+  for (int i = 0; i < page_header_->column_num; ++i) {
+    data_len += get_field_len(i);
+  }
+  record.new_record(data_len);
+  data_len = 0;
+  for (int i = 0; i < page_header_->column_num; ++i) {
+    record.set_field(data_len, get_field_len(i), get_field_data(rid.slot_num, i));
+    data_len += get_field_len(i);
+  }
+
+  // record.set_data(get_record_data(rid.slot_num), page_header_->record_real_size);
+  return RC::SUCCESS;
 }
 
 // TODO: specify the column_ids that chunk needed. currenly we get all columns
 RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
 {
   // your code here
-  exit(-1);
+  // exit(-1);
+
+  Bitmap bitmap(bitmap_, page_header_->record_capacity);
+  int start = 0;
+  while (true) {
+    int index = bitmap.next_setted_bit(start);
+    if (index == -1) {
+      break;
+    }
+    start = index + 1;
+    for (int i = 0; i < chunk.column_num(); ++i) {
+      int column_id = chunk.column_ids(i);
+      chunk.column(i).append_one(get_field_data(index, column_id));
+    }
+  }
+  return RC::SUCCESS;
 }
 
 char *PaxRecordPageHandler::get_field_data(SlotNum slot_num, int col_id)
