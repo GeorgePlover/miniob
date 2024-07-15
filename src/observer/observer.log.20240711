@@ -1,0 +1,43 @@
+[2024-07-11 20:29:29.804495 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: init@init.cpp:200] >> Output configuration 
+Begin dump configuration
+[]
+
+[LOG]
+LOG_CONSOLE_LEVEL=1
+LOG_FILE_LEVEL=5
+LOG_FILE_NAME=observer.log
+
+Finish dump configuration 
+
+[2024-07-11 20:29:29.828919 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:128, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.829441 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:256, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.829846 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:384, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.830701 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:512, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.831178 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:640, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.831631 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:768, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.832046 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:896, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.832718 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:1024, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.833126 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:1152, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.833620 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:1280, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.834235 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:1408, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.834694 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:1536, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.835093 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:1664, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.835531 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:1792, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.836240 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:1920, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.836735 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:2048, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.837196 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:2176, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.837600 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:2304, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.838187 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:2432, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.838630 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: extend@mem_pool.h:244] >> Extend one pool, this->size:2560, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.838778 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: init@mem_pool.h:191] >> Extend one pool, this->size:2560, item_num_per_pool:128, this->name:BufPool.
+[2024-07-11 20:29:29.838955 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: BufferPoolManager@disk_buffer_pool.cpp:771] >> buffer pool manager init with memory size 20971520, page num: 2560, pool num: 20
+[2024-07-11 20:29:29.847266 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: load_pages@double_write_buffer.cpp:283] >> double write buffer load pages done. page num=0
+[2024-07-11 20:29:29.847770 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: init_meta@db.cpp:307] >> Db meta file not exist. db=sys, file=miniob/db/sys/sys.db
+[2024-07-11 20:29:29.849827 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: open_all_tables@db.cpp:217] >> All table have been opened. num=0
+[2024-07-11 20:29:29.853433 pid:1404 tid:7ffff706b7c0 ctx:0 TRACE: recover@db.cpp:271] >> db recover begin. check_point_lsn=0
+[2024-07-11 20:29:29.859915 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: recover@db.cpp:298] >> Successfully recover db. db=sys checkpoint_lsn=0
+[2024-07-11 20:29:29.860162 pid:1404 tid:7ffff706b7c0 ctx:0 TRACE: set_current_db@session.cpp:56] >> change db to sys
+[2024-07-11 20:29:29.864569 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: init@default_handler.cpp:69] >> Default handler init with miniob success
+[2024-07-11 20:29:29.864754 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: init@init.cpp:215] >> Successfully init utility
+[2024-07-11 20:29:36.096805 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: start_tcp_server@server.cpp:194] >> Listen on port 6789
+[2024-07-11 20:29:36.097016 pid:1404 tid:7ffff706b7c0 ctx:0 INFO: start_tcp_server@server.cpp:197] >> Observer start success
