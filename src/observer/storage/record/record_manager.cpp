@@ -534,7 +534,7 @@ RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
     for (int slot_num=bitmap.next_setted_bit(0);slot_num!=-1;slot_num=bitmap.next_setted_bit(slot_num+1)){
       char *src=frame_->data()+page_header_->data_offset+pre+slot_num*column_len;
       assert(src==get_field_data(slot_num, column_id));
-      chunk.column(i).append_one(get_field_data(slot_num, column_id));
+      chunk.column(i).append_one(src);
     }
   }
   return RC::SUCCESS;
