@@ -9,3 +9,10 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #include "sql/operator/group_by_vec_physical_operator.h"
+#include <algorithm>
+#include <string>
+#include <vector>
+
+using namespace std;
+using namespace common;
+
