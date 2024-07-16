@@ -21,13 +21,13 @@ using namespace common;
 GroupByVecPhysicalOperator::GroupByVecPhysicalOperator(
     std::vector<std::unique_ptr<Expression>> &&group_by_exprs, std::vector<Expression *> &&expressions){
     group_by_expressions_ = std::move(group_by_exprs);
-    value_expressions_ = std::move(expressions);
-    aggregate_expressions_.reserve(value_expressions_.size());
-        ranges::for_each(value_expressions_, [this](Expression *expr) {
+    aggregate_expressions_ = std::move(expressions);
+    value_expressions_.reserve(aggregate_expressions_.size());
+        ranges::for_each(aggregate_expressions_, [this](Expression *expr) {
         auto       *aggregate_expr = static_cast<AggregateExpr *>(expr);
         Expression *child_expr     = aggregate_expr->child().get();
         ASSERT(child_expr != nullptr, "aggregate expression must have a child expression");
-        aggregate_expressions_.emplace_back(child_expr);
+        value_expressions_.emplace_back(child_expr);
     });
     group_by_hash_table_ = new StandardAggregateHashTable(aggregate_expressions_);
     scanner_ = new StandardAggregateHashTable::Scanner(group_by_hash_table_);
@@ -42,15 +42,9 @@ RC GroupByVecPhysicalOperator::open(Trx *trx){
      LOG_INFO("failed to open child operator. rc=%s", strrc(rc));
      return rc;
    }
-
-//   ExpressionTuple<Expression *> group_value_expression_tuple(value_expressions_);
-
-//   ValueListTuple group_by_evaluated_tuple;
-    map<vector<string>, vector<int>> group_by_map;
-    
-    for (int i = 0; i < group_by_expressions_.size()+aggregate_expressions_.size(); i++) {
-        output_chunck_.add_column(unique_ptr<Column>(new Column), i);
-    }
+    // for (int i = 0; i < group_by_expressions_.size()+aggregate_expressions_.size(); i++) {
+    //     output_chunck_.add_column(unique_ptr<Column>(new Column()), i);
+    // }
     while (OB_SUCC(rc = child.next(chunk_))) {
        //cout<<chunk_.rows()<<endl;
        
@@ -61,20 +55,20 @@ RC GroupByVecPhysicalOperator::open(Trx *trx){
            auto expr = group_by_expressions_[i].get();
            group_by_columns.push_back(unique_ptr<Column>(new Column));
            expr->get_column(chunk_, *group_by_columns.back());
+           output_chunck_.add_column(make_unique<Column> (group_by_columns.back()->attr_type(), group_by_columns.back()->attr_len()),i);
            groups_chunk.add_column(move(group_by_columns.back()),i);
        }
        for(int i=0;i<aggregate_expressions_.size();i++){
-           auto expr = aggregate_expressions_[i];
+           auto expr = value_expressions_[i];
            aggregate_value_columns.push_back(unique_ptr<Column>(new Column));
            expr->get_column(chunk_, *aggregate_value_columns.back());
+           output_chunck_.add_column(make_unique<Column> (aggregate_value_columns.back()->attr_type(), aggregate_value_columns.back()->attr_len()),i+group_by_expressions_.size());
            aggrs_chunk.add_column(move(aggregate_value_columns.back()),i);
        }
        group_by_hash_table_->add_chunk(groups_chunk, aggrs_chunk);
     }
     scanner_->open_scan();
     
-    
-
     if (rc == RC::RECORD_EOF){
         return RC::SUCCESS;
     }
@@ -84,6 +78,9 @@ RC GroupByVecPhysicalOperator::open(Trx *trx){
     }
 }
 RC GroupByVecPhysicalOperator::next(Chunk &chunk){
+    if (output_chunck_.column_num() == 0) {
+        return RC::RECORD_EOF;
+    }
     RC rc = RC::SUCCESS;
     output_chunck_.reset_data();
     if(OB_SUCC(rc = scanner_->next(output_chunck_))){
