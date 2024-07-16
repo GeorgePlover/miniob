@@ -103,11 +103,11 @@ RC AggregateVecPhysicalOperator::next(Chunk &chunk)
   // your code here
   // exit(-1);
 
+  chunk.reset();
+
   if (output_chunk_.column_num() == 0) {
     return RC::RECORD_EOF;
   }
-
-  chunk.reset();
 
   for (size_t i = 0; i < aggregate_expressions_.size(); i++) {
     ASSERT(aggregate_expressions_[i]->type() == ExprType::AGGREGATION, "expect aggregate expression");
