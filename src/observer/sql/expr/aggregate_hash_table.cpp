@@ -9,13 +9,37 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #include "sql/expr/aggregate_hash_table.h"
+#include "sql/expr/aggregator.h"
 
 // ----------------------------------StandardAggregateHashTable------------------
 
 RC StandardAggregateHashTable::add_chunk(Chunk &groups_chunk, Chunk &aggrs_chunk)
 {
   // your code here
-  exit(-1);
+  for(int i = 0; i < groups_chunk.rows(); i++) {
+    vector<Value> group_by_values;
+    for(int j = 0; j < groups_chunk.column_num(); j++) {
+      group_by_values.push_back(groups_chunk.get_value(j,i));
+    }
+    vector<Value> aggr_values;
+    for(int j = 0; j < aggrs_chunk.column_num(); j++) {
+      aggr_values.push_back(aggrs_chunk.get_value(j,i));
+    }
+    if (aggr_values_.count(group_by_values)) // 已经有的group，把他聚合进去
+    {
+      for (int j = 0; j < aggr_values.size(); j++) {
+        SumAggregator aggr;
+        aggr.accumulate(aggr_values_[group_by_values][j]);
+        aggr.accumulate(aggr_values[j]);
+        aggr.evaluate(aggr_values_[group_by_values][j]); 
+      }
+    }
+    else // 新的group，插入到hash表中
+    {
+      aggr_values_[group_by_values] = aggr_values;
+    }
+  }
+  return RC::SUCCESS;
 }
 
 void StandardAggregateHashTable::Scanner::open_scan()
