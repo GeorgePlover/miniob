@@ -231,33 +231,72 @@ void LinearProbingAggregateHashTable<V>::resize_if_need()
     resize();
   }
 }
-
+template <typename V>
+void LinearProbingAggregateHashTable<V>::dhlsb(int key,V value,int off){
+  int hsh=(key%capacity_+capacity_+off)%capacity_;
+  while (true){
+    if (keys_[hsh]==EMPTY_KEY){
+      keys_[hsh]=key;
+      values_[hsh]=value;
+      size_+=1;
+      return ;
+    }else if (keys_[hsh]==key){
+      aggregate(&values_[hsh],value);
+      return ;
+    }
+    hsh=(hsh+1)%capacity_;
+  }
+}
 template <typename V>
 void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_values, int len)
 {
   // your code here
-  exit(-1);
-
+  // exit(-1);
+  
   // inv (invalid) 表示是否有效，inv[i] = -1 表示有效，inv[i] = 0 表示无效。
   // key[SIMD_WIDTH],value[SIMD_WIDTH] 表示当前循环中处理的键值对。
   // off (offset) 表示线性探测冲突时的偏移量，key[i] 每次遇到冲突键，则off[i]++，如果key[i] 已经完成聚合，则off[i] = 0，
   // i = 0 表示selective load 的起始位置。
   // inv 全部初始化为 -1
   // off 全部初始化为 0
-
-  // for (; i + SIMD_WIDTH <= len;) {
+  int inv[SIMD_WIDTH]={-1,-1,-1,-1,-1,-1,-1,-1};
+  int key[SIMD_WIDTH];V value[SIMD_WIDTH];
+  int off[SIMD_WIDTH]={0};
+  int i=0;
+  for (; i + SIMD_WIDTH <= len;) {
     // 1: 根据 `inv` 变量的值，从 `input_keys` 中 `selective load` `SIMD_WIDTH` 个不同的输入键值对。
-    // 2. 计算 i += |inv|, `|inv|` 表示 `inv` 中有效的个数 
+    // 2. 计算 i += |inv|, `|inv|` 表示 `inv` 中有效的个数
+    // __m256i useless;
+    // selective_load(input_keys,i,key,useless); 
+    my_selective_load(input_keys,i,key,inv);
+    my_selective_load2(input_values,i,value,inv);
     // 3. 计算 hash 值，
+    for (int j=0;j<SIMD_WIDTH;j++){
+      int hsh=(key[j]%capacity_+capacity_+off[j])%capacity_;
+      if(keys_[hsh]==key[j]) {
+        aggregate(&values_[hsh],value[j]);
+        off[j]=0;inv[j]=-1;
+      }
+      else if (keys_[hsh]==EMPTY_KEY){
+        keys_[hsh]=key[j];values_[hsh]=value[j];
+        off[j]=0;inv[j]=-1;
+        size_+=1;
+      }else{
+        inv[j]=0;off[j]+=1;
+      }
+    }
+    resize_if_need();
     // 4. 根据聚合类型（目前只支持 sum），在哈希表中更新聚合结果。如果本次循环，没有找到key[i] 在哈希表中的位置，则不更新聚合结果。
     // 5. gather 操作，根据 hash 值将 keys_ 的 gather 结果写入 table_key 中。
     // 6. 更新 inv 和 off。如果本次循环key[i] 聚合完成，则inv[i]=-1，表示该位置在下次循环中读取新的键值对。
     // 如果本次循环 key[i] 未在哈希表中聚合完成（table_key[i] != key[i]），则inv[i] = 0，表示该位置在下次循环中不需要读取新的键值对。
     // 如果本次循环中，key[i]聚合完成，则off[i] 更新为 0，表示线性探测偏移量为 0，key[i] 未完成聚合，则off[i]++,表示线性探测偏移量加 1。
-  // }
-  //7. 通过标量线性探测，处理剩余键值对
-
-  // resize_if_need();
+  }
+  // 7. 通过标量线性探测，处理剩余键值对
+  for(int j=0;j<SIMD_WIDTH;j++){
+    if(inv[j]==0) dhlsb(key[j],value[j],off[j]);
+  }
+  for (;i<len;i++) dhlsb(input_keys[i],input_values[i],0);
 }
 
 template <typename V>

@@ -158,6 +158,8 @@ private:
 
   void resize_if_need();
 
+  void dhlsb(int key,V value,int off);
+
 private:
   static const int EMPTY_KEY;
   static const int DEFAULT_CAPACITY;

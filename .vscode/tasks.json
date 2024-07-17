@@ -36,7 +36,8 @@
             "command": "cmake",
             "args": [
                 "-DDEBUG=ON",
-                ".."
+                "-DUSE_SIMD=ON",
+                "..",
             ]
         },
         {
@@ -52,6 +53,7 @@
             "args": [
                 "-j",
                 "4",
+                "-DUSE_SIMD=ON",
             ]
         }
     ]

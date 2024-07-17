@@ -68,4 +68,33 @@ template void selective_load<uint32_t>(uint32_t *memory, int offset, uint32_t *v
 template void selective_load<int>(int *memory, int offset, int *vec, __m256i &inv);
 template void selective_load<float>(float *memory, int offset, float *vec, __m256i &inv);
 
+template <typename V>
+void my_selective_load(V *memory, int offset, V *vec, int *inv)
+{
+  int *inv_ptr = inv;
+  for (int i = 0; i < SIMD_WIDTH; i++) {
+    if (inv_ptr[i] == -1) {
+      vec[i] = memory[offset++];
+    }
+  }
+}
+
+template <typename V>
+void my_selective_load2(V *memory, int& offset, V *vec, int *inv)
+{
+  int *inv_ptr = inv;
+  for (int i = 0; i < SIMD_WIDTH; i++) {
+    if (inv_ptr[i] == -1) {
+      vec[i] = memory[offset++];
+    }
+  }
+}
+
+template void my_selective_load<uint32_t>(uint32_t *memory, int offset, uint32_t *vec, int *inv);
+template void my_selective_load<int>(int *memory, int offset, int *vec, int *inv);
+template void my_selective_load<float>(float *memory, int offset, float *vec, int *inv);
+
+template void my_selective_load2<uint32_t>(uint32_t *memory, int& offset, uint32_t *vec, int *inv);
+template void my_selective_load2<int>(int *memory, int& offset, int *vec, int *inv);
+template void my_selective_load2<float>(float *memory, int& offset, float *vec, int *inv);
 #endif
