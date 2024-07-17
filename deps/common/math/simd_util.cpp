@@ -23,21 +23,35 @@ int mm256_extract_epi32_var_indx(const __m256i vec, const unsigned int i)
 int mm256_sum_epi32(const int *values, int size)
 {
   // your code here
-  int sum = 0;
-  for (int i = 0; i < size; i++) {
-    sum += values[i];
+  __m256i sum = _mm256_setzero_si256();
+  int result = 0;
+  for(int i = 0; i < size % 8 ; i++)result += values[i];
+  for (int i = 0; i < size; i += 8) {
+    __m256i vec = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(values + i));
+    sum = _mm256_add_epi32(sum, vec);
   }
-  return sum;
+  int *sum_ptr = reinterpret_cast<int *>(&sum);
+  for (int i = 0; i < 8; i++) {
+    result += sum_ptr[i];
+  }
+  return result;
 }
 
 float mm256_sum_ps(const float *values, int size)
 {
   // your code here
-  float sum = 0;
-  for (int i = 0; i < size; i++) {
-    sum += values[i];
+  __m256 sum = _mm256_setzero_ps();
+  float result = 0;
+  for(int i = 0; i < size % 8 ; i++)result += values[i];
+  for (int i = 0; i < size; i += 8) {
+    __m256 vec = _mm256_loadu_ps(values + i);
+    sum = _mm256_add_ps(sum, vec);
   }
-  return sum;
+  float *sum_ptr = reinterpret_cast<float *>(&sum);
+  for (int i = 0; i < 8; i++) {
+    result += sum_ptr[i];
+  }
+  return result;
 }
 
 template <typename V>
