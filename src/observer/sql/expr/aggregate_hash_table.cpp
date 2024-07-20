@@ -271,8 +271,19 @@ void LinearProbingAggregateHashTable<V>::add_batch(int *input_keys, V *input_val
     my_selective_load(input_keys,i,key,inv);
     my_selective_load2(input_values,i,value,inv);
     // 3. 计算 hash 值，
+
+    
+    auto key_vec = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(key));
+    auto capacity_vec = _mm256_set1_epi32(capacity_);
+    auto quotient_vec = DivideOperator::operation(key_vec, capacity_vec);
+    auto remainder_vec = SubtractOperator::operation(key_vec,MultiplyOperator::operation(quotient_vec, capacity_vec));
+    auto off_vec = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(off));
+    auto hsh_vec =  AddOperator::operation(AddOperator::operation(remainder_vec,capacity_vec),off_vec);
+
     for (int j=0;j<SIMD_WIDTH;j++){
-      int hsh=(key[j]%capacity_+capacity_+off[j])%capacity_;
+      int hsh= mm256_extract_epi32_var_indx(hsh_vec,j);
+      while(hsh>=capacity_) hsh-=capacity_;
+
       if(keys_[hsh]==key[j]) {
         aggregate(&values_[hsh],value[j]);
         off[j]=0;inv[j]=-1;
