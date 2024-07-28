@@ -18,11 +18,11 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include <sstream>
 
-const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "booleans"};
+const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "dates", "booleans"};
 
 const char *attr_type_to_string(AttrType type)
 {
-  if (type >= AttrType::UNDEFINED && type <= AttrType::FLOATS) {
+  if (type >= AttrType::UNDEFINED && type <= AttrType::DATES) {
     return ATTR_TYPE_NAME[static_cast<int>(type)];
   }
   return "unknown";
@@ -59,6 +59,10 @@ void Value::set_data(char *data, int length)
       num_value_.float_value_ = *(float *)data;
       length_                 = length;
     } break;
+    case AttrType::DATES: {
+      num_value_.int_value_ = *(int *)data;
+      length_               = length;
+    } break;
     case AttrType::BOOLEANS: {
       num_value_.bool_value_ = *(int *)data != 0;
       length_                = length;
@@ -74,12 +78,16 @@ void Value::set_int(int val)
   num_value_.int_value_ = val;
   length_               = sizeof(val);
 }
-
 void Value::set_float(float val)
 {
   attr_type_              = AttrType::FLOATS;
   num_value_.float_value_ = val;
   length_                 = sizeof(val);
+}
+void Value::set_date(int val){
+  attr_type_             = AttrType::DATES;
+  num_value_.int_value_  = val;
+  length_                = sizeof(val);
 }
 void Value::set_boolean(bool val)
 {
@@ -107,6 +115,9 @@ void Value::set_value(const Value &value)
     } break;
     case AttrType::FLOATS: {
       set_float(value.get_float());
+    } break;
+    case AttrType::DATES: {
+      set_date(value.get_date_int());
     } break;
     case AttrType::CHARS: {
       set_string(value.get_string().c_str());
@@ -142,6 +153,13 @@ std::string Value::to_string() const
     case AttrType::FLOATS: {
       os << common::double_to_str(num_value_.float_value_);
     } break;
+    case AttrType::DATES: {
+      os << num_value_.int_value_/10000 << "-";
+      if(num_value_.int_value_%10000 < 1000) os << "0";
+      os << (num_value_.int_value_%10000)/100 << "-";
+      if (num_value_.int_value_%100 < 10) os << "0";
+      os << num_value_.int_value_%100;
+    } break;
     case AttrType::BOOLEANS: {
       os << num_value_.bool_value_;
     } break;
@@ -165,6 +183,9 @@ int Value::compare(const Value &other) const
       case AttrType::FLOATS: {
         return common::compare_float((void *)&this->num_value_.float_value_, (void *)&other.num_value_.float_value_);
       } break;
+      case AttrType::DATES: {
+        return common::compare_int((void *)&this->num_value_.int_value_, (void *)&other.num_value_.int_value_);
+      } break;
       case AttrType::CHARS: {
         return common::compare_string((void *)this->str_value_.c_str(),
             this->str_value_.length(),
@@ -184,6 +205,14 @@ int Value::compare(const Value &other) const
   } else if (this->attr_type_ == AttrType::FLOATS && other.attr_type_ == AttrType::INTS) {
     float other_data = other.num_value_.int_value_;
     return common::compare_float((void *)&this->num_value_.float_value_, (void *)&other_data);
+  }
+  else if (this->attr_type_ == AttrType::DATES && other.attr_type_ == AttrType::CHARS) {
+    int other_data = other.get_date_int();
+    return common::compare_int((void *)&this->num_value_.int_value_, (void *)&other_data);
+  }
+  else if (this->attr_type_ == AttrType::CHARS && other.attr_type_ == AttrType::DATES) {
+    int this_data = this->get_date_int();
+    return common::compare_int((void *)&this_data, (void *)&other.num_value_.int_value_);
   }
   LOG_WARN("not supported");
   return -1;  // TODO return rc?
@@ -205,6 +234,10 @@ int Value::get_int() const
     }
     case AttrType::FLOATS: {
       return (int)(num_value_.float_value_);
+    }
+    case AttrType::DATES: {
+      LOG_WARN("date type convert to int as yyyymmdd.");
+      return num_value_.int_value_;
     }
     case AttrType::BOOLEANS: {
       return (int)(num_value_.bool_value_);
@@ -234,6 +267,10 @@ float Value::get_float() const
     case AttrType::FLOATS: {
       return num_value_.float_value_;
     } break;
+    case AttrType::DATES: {
+      LOG_WARN("date type convert to float as yyyymmdd.");
+      return float(num_value_.int_value_);
+    } break;
     case AttrType::BOOLEANS: {
       return float(num_value_.bool_value_);
     } break;
@@ -243,6 +280,56 @@ float Value::get_float() const
     }
   }
   return 0;
+}
+
+int Value::get_date_int() const
+{
+  switch (attr_type_) {
+    case AttrType::CHARS: {
+      int year,month,day;
+      int ret = sscanf(str_value_.c_str(),"%d-%d-%d",&year,&month,&day);
+      int max_days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+      bool is_leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+      if(is_leap)max_days[1] = 29;
+      bool is_valid = (year >= 1 && year <= 9999) && (month >= 1 && month <= 12) && (day >= 1 && day <= max_days[month-1]);
+      if (ret != 3 || !is_valid) {
+        LOG_WARN("failed to convert string to date. s=%s", str_value_.c_str());
+        return 0;
+      }
+      return year * 10000 + month * 100 + day;
+    } break;
+    case AttrType::INTS: {
+      return num_value_.int_value_;
+    } break;
+    case AttrType::FLOATS: {
+      LOG_WARN("float type convert to date as yyyymmdd.");
+      return (int)(num_value_.float_value_);
+    } break;
+    case AttrType::DATES: {
+      return num_value_.int_value_;
+    } break;
+    case AttrType::BOOLEANS: {
+      LOG_WARN("boolean type convert to date as 1 or 0.");
+      return (int)(num_value_.bool_value_);
+    } break;
+    default: {
+      LOG_WARN("unknown data type. type=%d", attr_type_);
+      return 0;
+    }
+  }
+  return 0;
+}
+
+std::string Value::get_date_string() const
+{
+  std::string date_str = this->to_string();
+  int year,month,day;
+  int ret = sscanf(date_str.c_str(),"%d-%d-%d",&year,&month,&day);
+  if (ret != 3) {
+    LOG_TRACE("failed to convert string to date. s=%s", date_str.c_str());
+    return "0000-00-00";
+  }
+  return date_str;
 }
 
 std::string Value::get_string() const { return this->to_string(); }
@@ -274,6 +361,9 @@ bool Value::get_boolean() const
     case AttrType::FLOATS: {
       float val = num_value_.float_value_;
       return val >= EPSILON || val <= -EPSILON;
+    } break;
+    case AttrType::DATES: {
+      return num_value_.int_value_ != 0;
     } break;
     case AttrType::BOOLEANS: {
       return num_value_.bool_value_;
