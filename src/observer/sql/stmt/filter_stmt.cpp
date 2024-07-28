@@ -128,5 +128,31 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   filter_unit->set_comp(comp);
 
   // 检查两个类型是否能够比较
+  if(filter_unit->left().is_attr && !filter_unit->right().is_attr 
+    && filter_unit->left().field.attr_type() == AttrType::DATES
+    && filter_unit->right().value.attr_type() == AttrType::CHARS){
+      FilterObj new_right = filter_unit->right();
+      int date_int = filter_unit->right().value.get_date_int();
+      if(!date_int){
+        LOG_WARN("invalid date format: %s", filter_unit->right().value.get_string().c_str());
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+      new_right.value.set_date(date_int);
+      filter_unit->set_right(new_right);
+    }
+  else if(!filter_unit->left().is_attr &&  filter_unit->right().is_attr
+    && filter_unit->left().value.attr_type() == AttrType::CHARS
+    && filter_unit->right().field.attr_type() == AttrType::DATES){
+      FilterObj new_left = filter_unit->left();
+      int date_int = filter_unit->left().value.get_date_int();
+      if(!date_int){
+        LOG_WARN("invalid date format: %s", filter_unit->left().value.get_string().c_str());
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+      new_left.value.set_date(date_int);
+      filter_unit->set_left(new_left);
+  }//和dates比较的chars类型直接转换成dates类型
+  
+
   return rc;
 }
