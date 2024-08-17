@@ -127,6 +127,43 @@ RC Table::create(Db *db, int32_t table_id, const char *path, const char *name, c
   return rc;
 }
 
+RC Table::drop(const char *base_dir, const char *name){
+  RC rc = sync();//刷新所有脏页
+  if(rc != RC::SUCCESS) return rc;
+  rc = RC::SUCCESS;
+
+  if (common::is_blank(name)) {
+    LOG_WARN("Name cannot be empty");
+    return RC::INVALID_ARGUMENT;
+  }
+
+  LOG_INFO("Begin to drop table %s:%s", base_dir, name);
+  string meta_file_path = table_meta_file(base_dir, name);
+  if(unlink(meta_file_path.c_str()) != 0) {//删除metafile
+        LOG_ERROR("Failed to remove meta file=%s, errno=%d", meta_file_path.c_str(), errno);
+        return RC::FILE_NOT_EXIST;
+  }
+
+  string data_file_path = table_data_file(base_dir, name);
+  if(unlink(data_file_path.c_str()) != 0) {//删除datafile
+        LOG_ERROR("Failed to remove data file=%s, errno=%d", data_file_path.c_str(), errno);
+        return RC::FILE_NOT_EXIST;
+  }
+
+  for(auto it = indexes_.begin(); it!= indexes_.end(); ++it){
+    Index *index = *it;
+    ((BplusTreeIndex*)index)->close();//关闭索引文件
+    string index_file = table_index_file(base_dir, name, index->index_meta().name());
+    if(unlink(index_file.c_str()) != 0){//删除索引文件
+            LOG_ERROR("Failed to remove index file=%s, errno=%d", index_file.c_str(), errno);
+            return RC::FILE_NOT_EXIST;
+    }
+  }
+
+  LOG_INFO("Successfully drop table %s:%s", base_dir, name);
+  return rc;
+}
+
 RC Table::open(Db *db, const char *meta_file, const char *base_dir)
 {
   // 加载元数据文件
